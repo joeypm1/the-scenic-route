@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
@@ -13,6 +13,14 @@ export const session = sqliteTable('session', {
 		.notNull()
 		.references(() => user.id),
 	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull()
+});
+
+export const scenicSegments = sqliteTable('scenic_segments', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(),
+	description: text('description'),
+	route_json: text('route_json').notNull(),
+	createdAt: text('createdAt').default(new Date().toISOString())
 });
 
 export type Session = typeof session.$inferSelect;
