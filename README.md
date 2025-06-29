@@ -1,38 +1,35 @@
-# sv
+# The Scenic Route
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Basic directions made *Scenic*\
+A Maps clone that prioritizes scenic routes instead of the fastest route.\
+Users have the ability to submit road sections.\
+State-designated Scenic Highways are used as well.
 
-## Creating a project
+## Building a graph file
 
-If you're seeing this, you've probably already done this step. Congrats!
-
+A graph file (.bin) must be used for route snapping functionality. Here is one way to do this:
+1. Get a Protocolbuffer (.osm.pbf) file from [BBBike](https://extract.bbbike.org/). 
+2. You'll need to [install Osmium Tool](https://osmcode.org/osmium-tool/) to run this:
 ```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+osmium tags-filter \                                                                                  
+  path/to/extracted.osm.pbf \
+  w/highway=motorway \
+  w/highway=trunk \
+  w/highway=primary \
+  w/highway=secondary \
+  w/highway=tertiary \
+  w/highway=unclassified \
+  w/highway=residential \
+  w/highway=service \
+  -o filtered.osm.pbf \
+  --overwrite
 ```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
+3. Clone the [route_snapper](https://github.com/dabreegster/route_snapper) repository.
+4. You'll need to [install Rust](https://www.rust-lang.org/tools/install) to run this:
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+cd osm-to-route-snapper
+cargo run --release -- \
+  --input path/to/filtered.osm.pbf \
+  --output graph.bin
 ```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+5. Place graph.bin inside the static/graph directory.
