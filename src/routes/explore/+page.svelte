@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import maplibregl from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
+	import { pageTitle } from '$lib/stores/titleStore';
+
+	pageTitle.set("Explore");
 
 	let map: maplibregl.Map;
 	let routes: GeoJSON.Feature[] = [];
@@ -36,24 +40,39 @@
 				},
 				paint: {
 					'line-color': '#3b82f6', // blue-500
-					'line-width': 4
+					'line-width': 6
 				}
 			});
 
-			// Optional: show popup on click
 			map.on('click', 'scenic-routes-line', (e) => {
 				const props = e.features?.[0]?.properties;
 				const name = props?.name ?? 'Unnamed';
 				const desc = props?.description ?? 'No description';
-				const creationDate = props?.createdAt ?? 'Unknown date';
+				const creationDate = props?.createdAt ? new Date(props.createdAt).toLocaleDateString() : 'Unknown date';
 
-				new maplibregl.Popup()
+				// zoom to LineString
+				const coordinates = e.features?.[0]?.geometry.coordinates;
+				const bounds = coordinates.reduce((bounds: maplibregl.LngLatBounds, coord: maplibregl.LngLatLike) => {
+					return bounds.extend(coord);
+				}, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+
+				map.fitBounds(bounds, {
+					padding: 100
+				});
+
+				// popup
+				new maplibregl.Popup({ closeButton: false, closeOnClick: true })
 					.setLngLat(e.lngLat)
-					.setHTML(`<h3>${name}</h3><p>${desc}</p><p>${creationDate}</p>`)
+					.setHTML(`
+						<div class="maplibregl-popup-content">
+							<h3>${name}</h3>
+							<p>${desc}</p>
+							<small>Submitted: ${creationDate}</small>
+						</div>
+					`)
 					.addTo(map);
 			});
 
-			// Change cursor on hover
 			map.on('mouseenter', 'scenic-routes-line', () => {
 				map.getCanvas().style.cursor = 'pointer';
 			});
@@ -66,9 +85,21 @@
 
 <style>
     #map {
-        width: 100%;
+        width: 80%;
         height: 80vh;
+				margin-top: 5vh;
     }
+
+		.maplibregl-popup-content {
+				font-family: 'Inter', sans-serif;
+				max-width: 300px;
+				padding: 12px;
+				background-color: white;
+				box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+				border-radius: 8px;
+		}
 </style>
 
-<div id="map" class="rounded shadow"></div>
+<div class="flex justify-center">
+	<div id="map" class="rounded shadow"></div>
+</div>

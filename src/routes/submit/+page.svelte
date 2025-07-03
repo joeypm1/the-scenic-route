@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import maplibregl from 'maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
 	import wasmUrl from 'route-snapper/route_snapper_bg.wasm?url';
 	import { init, RouteSnapper } from 'route-snapper/lib.js';
+	import { pageTitle } from '$lib/stores/titleStore';
+
+	pageTitle.set("Submit a Route");
 
 	let map: maplibregl.Map;
 	let snapper: RouteSnapper;
@@ -68,10 +72,7 @@
 				confirmedFeatures.push(routeGeoJson);
 
 				// update map layer
-				map.getSource('confirmed-route')?.setData({
-					type: 'FeatureCollection',
-					features: confirmedFeatures
-				});
+				updateRoutesLayer();
 
 				isDrawing = false;
 				showConfirm = true;
@@ -83,6 +84,13 @@
 		});
 	});
 
+	function updateRoutesLayer() {
+		map.getSource('confirmed-route')?.setData({
+			type: 'FeatureCollection',
+			features: confirmedFeatures
+		});
+	}
+
 	function toggleDrawing() {
 		if (isDrawing) {
 			snapper.stop();
@@ -91,6 +99,10 @@
 			snapper.start();
 			isDrawing = true;
 		}
+
+		// clear routes
+		confirmedFeatures = [];
+		updateRoutesLayer();
 	}
 
 	function finishDrawing() {
@@ -138,13 +150,17 @@
 
 <style>
 		#map {
-				width: 100%;
-				height: 60vh;
+				width: 80%;
+				height: 80vh;
+				margin-top: 5vh;
 		}
 </style>
 
 <!-- map -->
-<div id="map" class="rounded shadow"></div>
+<div class="flex justify-center">
+	<div id="map" class="rounded shadow"></div>
+</div>
+
 <div id="snap-tool" class="hidden"></div>
 
 <!-- toggle drawing button -->
@@ -196,7 +212,7 @@
 			</button>
 			<button
 				class="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
-				on:click={() => { showConfirm = false; routeGeoJson = null; }}
+				on:click={() => { showConfirm = false; routeGeoJson = null; confirmedFeatures?.pop(); updateRoutesLayer() }}
 			>
 				Cancel
 			</button>

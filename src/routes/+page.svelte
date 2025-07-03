@@ -7,6 +7,7 @@
 		GlobeControl,
 		GeolocateControl
 	} from 'svelte-maplibre-gl';
+	import 'maplibre-gl/dist/maplibre-gl.css';
 
 	let lnglat: [number, number] = $state([141.350714, 43.068564]);
 
@@ -38,12 +39,3 @@
 
 	<Marker bind:lnglat draggable />
 </MapLibre>
-
-<p>
-	Longitude:
-	<input type="number" bind:value={lnglat[0]} />
-</p>
-<p>
-	Latitude:
-	<input type="number" bind:value={lnglat[1]} />
-</p>

@@ -1,7 +1,17 @@
 <script lang="ts">
 	import '../app.css';
+	import Navbar from '$lib/components/Navbar.svelte';
+	import { pageTitle } from '$lib/stores/titleStore';
 
-	let { children } = $props();
+	const { children } = $props();
 </script>
 
-{@render children()}
+<svelte:head>
+	<title>{$pageTitle} | The Scenic Route</title>
+</svelte:head>
+
+<Navbar />
+
+<main>
+	{@render children()}
+</main>

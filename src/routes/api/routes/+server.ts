@@ -7,7 +7,16 @@ export async function GET() {
 
 	const features = rows.map((row) => {
 		try {
-			return JSON.parse(row.route_json);
+			const geo = JSON.parse(row.route_json);
+			return {
+				...geo,
+				properties: {
+					...(geo.properties ?? {}),
+					name: row.name,
+					description: row.description ?? '',
+					createdAt: row.createdAt
+				}
+			};
 		} catch (e) {
 			console.warn('Failed to parse route_json:', e);
 			return null;
