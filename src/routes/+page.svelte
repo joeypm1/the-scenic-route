@@ -166,8 +166,6 @@
 			zoom: 13
 		});
 
-
-
 		map.on('load', () => {
 			directions = new MapLibreGlDirections(map, {
 				requestOptions: {
@@ -204,35 +202,31 @@
 						const scenicRoutes = data.features;
 						const scenicSegments = findNearbyScenicSegments(routeLine, scenicRoutes);
 
-						// generate midpoints
-						const midpoints = scenicSegments
-							.map((segment) => {
-								const coords = segment.geometry.coordinates;
-								const midpoint = turf.midpoint(coords[0], coords[coords.length-1]);
-								return {
-									midpoint: midpoint.geometry.coordinates as [number, number],
-									segment,
-								};
-							});
+						// generate scenic segment points
+						const segmentPoints = scenicSegments.map((segment) => {
+							const coords = segment.geometry.coordinates;
+							const start = coords[0];
+							const end = coords[coords.length - 1];
 
-						// sort by distance along route
-						const sortedMidpoints = midpoints
-							.map(({ midpoint, segment }) => {
-								const nearestPoint = turf.nearestPointOnLine(routeLine, turf.point(midpoint));
-								return {
-									midpoint,
-									distanceAlongRoute: nearestPoint.properties!.location as number,
-									segment,
-								};
-							})
-							.sort((a, b) => a.distanceAlongRoute - b.distanceAlongRoute);
+							// determine which end is closer to the route & make direction go from closer to farther
+							const startDist = turf.pointToLineDistance(turf.point(start), routeLine, { units: 'meters' });
+							const endDist = turf.pointToLineDistance(turf.point(end), routeLine, { units: 'meters' });
+							const ordered = startDist < endDist ? [start, end] : [end, start];
 
-						// extract sorted midpoint coordinates
-						const scenicMidpoints: [number, number][] = sortedMidpoints.map(m => m.midpoint);
+							const midpoint = turf.midpoint(ordered[0], ordered[1]);
+							const alongRoute = turf.nearestPointOnLine(routeLine, midpoint);
+
+							return {
+								points: ordered as [number, number][],
+								distanceAlongRoute: alongRoute.properties!.location as number
+							};
+						}).sort((a, b) => a.distanceAlongRoute - b.distanceAlongRoute);
+
+						const scenicWaypoints: [number, number][] = segmentPoints.flatMap(s => s.points);
 
 						const waypoints: [number, number][] = [
 							startCoord,// directions.waypoints[0],
-							...scenicMidpoints.filter(Boolean).slice(0, 3),
+							...scenicWaypoints.slice(0, 6),
 							endCoord// directions.waypoints[1]
 						];
 
