@@ -6,6 +6,7 @@
 	import { pageTitle } from '$lib/stores/titleStore';
 	import { debounce } from '$lib/utils/debounce';
 	import * as turf from '@turf/turf';
+	import distance from '@turf/distance';
 	import polyline from '@mapbox/polyline';
 
 	pageTitle.set("Get Directions");
@@ -202,32 +203,47 @@
 						const scenicRoutes = data.features;
 						const scenicSegments = findNearbyScenicSegments(routeLine, scenicRoutes);
 
-						// generate scenic segment points
-						const segmentPoints = scenicSegments.map((segment) => {
+						const segmentData = scenicSegments.map(segment => {
 							const coords = segment.geometry.coordinates;
-							const start = coords[0];
-							const end = coords[coords.length - 1];
+							const A: [number, number] = coords[0];
+							const B: [number, number] = coords[coords.length-1];
+							const ptA = turf.point(A);
+							const ptB = turf.point(B);
 
-							// determine which end is closer to the route & make direction go from closer to farther
-							const startDist = turf.pointToLineDistance(turf.point(start), routeLine, { units: 'meters' });
-							const endDist = turf.pointToLineDistance(turf.point(end), routeLine, { units: 'meters' });
-							const ordered = startDist < endDist ? [start, end] : [end, start];
+							// snap both ends to route line
+							const nearestA = turf.nearestPointOnLine(routeLine, ptA);
+							const nearestB = turf.nearestPointOnLine(routeLine, ptB);
 
-							const midpoint = turf.midpoint(ordered[0], ordered[1]);
-							const alongRoute = turf.nearestPointOnLine(routeLine, midpoint);
+							// how far along the route they lie
+							const offsetA = nearestA.properties!.location as number;
+							const offsetB = nearestB.properties!.location as number;
+							const routeCenter = (offsetA + offsetB) / 2;
 
-							return {
-								points: ordered as [number, number][],
-								distanceAlongRoute: alongRoute.properties!.location as number
-							};
-						}).sort((a, b) => a.distanceAlongRoute - b.distanceAlongRoute);
+							// measure detour in/out distances
+							const inDist = turf.distance(ptA, nearestA, { units: 'miles' });
+							const outDist = turf.distance(ptB, nearestB, { units: 'miles' });
 
-						const scenicWaypoints: [number, number][] = segmentPoints.flatMap(s => s.points);
+							// order entry/exit to always go forward
+							const points: [number, number][] = offsetA < offsetB ? [A, B] : [B, A];
+
+							// calculate detour score
+							const score = inDist + outDist * 1.5;
+
+							return { points, routeCenter, inDist, outDist, score };
+						});
+
+						// sort by routeCenter (route order), then by score (smallest detour)
+						segmentData.sort((a, b) => {
+							if (a.routeCenter !== b.routeCenter) return a.routeCenter - b.routeCenter;
+							return a.score - b.score;
+						});
+
+						const scenicWaypoints: [number, number][] = segmentData.slice(0, 3).flatMap(s => s.points);
 
 						const waypoints: [number, number][] = [
-							startCoord,// directions.waypoints[0],
+							startCoord,
 							...scenicWaypoints.slice(0, 6),
-							endCoord// directions.waypoints[1]
+							endCoord
 						];
 
 						scenicWaypointsAdded = true;
