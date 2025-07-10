@@ -2,9 +2,11 @@
 	import { onMount } from 'svelte';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import MapLibreGlDirections, { LoadingIndicatorControl } from "@maplibre/maplibre-gl-directions";
+	import MapLibreGlDirections, { LoadingIndicatorControl, layersFactory } from "@maplibre/maplibre-gl-directions";
 	import { pageTitle } from '$lib/stores/titleStore';
 	import { debounce } from '$lib/utils/debounce';
+	import * as turf from '@turf/turf';
+	import polyline from '@mapbox/polyline';
 
 	pageTitle.set("Get Directions");
 
@@ -13,11 +15,65 @@
 
 	let start = '';
 	let end = '';
+	let startCoord: [number, number];
+	let endCoord: [number, number];
+	let scenicWaypointsAdded = false;
 	let loading = false;
 
 	let startSuggestions: string[] = [];
 	let endSuggestions: string[] = [];
 	let selectedField : 'start' | 'end' | null = null;
+
+	function findNearbyScenicSegments(
+		routeLine: GeoJSON.LineString,
+		scenicRoutes: GeoJSON.Feature[]
+	) {
+		const THRESHOLD_MILES = 1;
+
+		scenicRoutes.forEach((scenic, index) => {
+			try {
+				if (
+					!scenic ||
+					scenic.type !== "Feature" ||
+					!scenic.geometry ||
+					scenic.geometry.type !== "LineString"
+				) {
+					console.warn(`Invalid geometry at index ${index}`);
+					return;
+				}
+
+				const scenicFeature = turf.feature(scenic.geometry, scenic.properties);
+				const buffered = turf.buffer(scenicFeature, THRESHOLD_MILES, { units: 'miles' });
+				const intersects = buffered && turf.booleanIntersects(routeLine, buffered);
+
+			} catch (err) {
+				console.warn("Error with scenic route", index, err);
+			}
+		});
+
+		return scenicRoutes.filter((scenic, index) => {
+			try {
+				if (
+					!scenic ||
+					scenic.type !== "Feature" ||
+					!scenic.geometry ||
+					scenic.geometry.type !== "LineString" ||
+					!Array.isArray(scenic.geometry.coordinates) ||
+					scenic.geometry.coordinates.length < 2
+				) {
+					console.warn(`Skipping scenic route at index ${index}: Invalid geometry`, scenic);
+					return false;
+				}
+
+				const scenicFeature = turf.feature(scenic.geometry, scenic.properties);
+				const buffered = turf.buffer(scenicFeature, THRESHOLD_MILES, { units: 'miles' });
+				return buffered && turf.booleanIntersects(routeLine, buffered);
+			} catch (e) {
+				console.warn(`Skipping scenic route at index ${index}:`, e);
+				return false;
+			}
+		});
+	}
 
 	function getMapBounds(): string {
 		const bounds = map.getBounds();
@@ -43,6 +99,39 @@
 		selectedField = null;
 	}
 
+	function addLabeledMarkers(coords: [number, number][]) {
+		const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+		// remove existing markers
+		document.querySelectorAll('.waypoint-label').forEach(el => el.remove());
+
+		coords.forEach(([lng, lat], i) => {
+			const el = document.createElement('div');
+			el.className = 'waypoint-label';
+			el.textContent = labels[i] || '?';
+
+			Object.assign(el.style, {
+				backgroundColor: '#fff',
+				color: '#000',
+				fontSize: '14px',
+				fontWeight: 'bold',
+				border: '2px solid #000',
+				borderRadius: '50%',
+				width: '28px',
+				height: '28px',
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'center',
+				textAlign: 'center',
+				boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+			});
+
+			new maplibregl.Marker({ element: el })
+				.setLngLat([lng, lat])
+				.addTo(map);
+		});
+	}
+
 	async function geocode(location: string): Promise<[number, number]> {
 		const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&viewbox=${getMapBounds()}&countrycodes=us`;//`https://maps.googleapis.com/maps/api/geocode/json?address=${location}`;
 		const res = await fetch(url, {
@@ -56,7 +145,9 @@
 	async function submitForm() {
 		loading = true;
 		try {
-			const [startCoord, endCoord] = await Promise.all([geocode(start), geocode(end)]);
+			// calculate non-scenic directions first
+			[startCoord, endCoord] = await Promise.all([geocode(start), geocode(end)]);
+			scenicWaypointsAdded = false;
 			directions.setWaypoints([startCoord, endCoord]);
 		} catch (err : any) {
 			alert(err.message);
@@ -75,16 +166,82 @@
 			zoom: 13
 		});
 
+
+
 		map.on('load', () => {
-			directions = new MapLibreGlDirections(map);
+			directions = new MapLibreGlDirections(map, {
+				requestOptions: {
+					alternatives: "true",
+				},
+			});
 			directions.interactive = false;
 
 			map.addControl(new LoadingIndicatorControl(directions), 'top-right');
 
-			// directions.setWaypoints([
-			// 	[-82.3248, 29.6516],
-			// 	[-82.3, 29.68]
-			// ]);
+			directions.on("fetchroutesend", (event) => {
+				if (scenicWaypointsAdded) return;
+
+				if (!event.data?.routes?.length) {
+					console.warn("No route returned");
+					return;
+				}
+
+				// get the route's LineString geometry
+				const encoded = event.data.routes[0].geometry as unknown as string;
+				const decodedCoords = polyline.decode(encoded);
+
+				const geojsonCoords = decodedCoords.map(([lat, lng]) => [lng, lat]);
+
+				const routeLine: GeoJSON.LineString = {
+					type: "LineString",
+					coordinates: geojsonCoords
+				};
+
+				// fetch scenic routes
+				fetch('/api/routes')
+					.then(res => res.json())
+					.then(data => {
+						const scenicRoutes = data.features;
+						const scenicSegments = findNearbyScenicSegments(routeLine, scenicRoutes);
+
+						// generate midpoints
+						const midpoints = scenicSegments
+							.map((segment) => {
+								const coords = segment.geometry.coordinates;
+								const midpoint = turf.midpoint(coords[0], coords[coords.length-1]);
+								return {
+									midpoint: midpoint.geometry.coordinates as [number, number],
+									segment,
+								};
+							});
+
+						// sort by distance along route
+						const sortedMidpoints = midpoints
+							.map(({ midpoint, segment }) => {
+								const nearestPoint = turf.nearestPointOnLine(routeLine, turf.point(midpoint));
+								return {
+									midpoint,
+									distanceAlongRoute: nearestPoint.properties!.location as number,
+									segment,
+								};
+							})
+							.sort((a, b) => a.distanceAlongRoute - b.distanceAlongRoute);
+
+						// extract sorted midpoint coordinates
+						const scenicMidpoints: [number, number][] = sortedMidpoints.map(m => m.midpoint);
+
+						const waypoints: [number, number][] = [
+							startCoord,// directions.waypoints[0],
+							...scenicMidpoints.filter(Boolean).slice(0, 3),
+							endCoord// directions.waypoints[1]
+						];
+
+						scenicWaypointsAdded = true;
+						directions.setWaypoints(waypoints);
+
+						addLabeledMarkers(waypoints);
+					});
+			});
 		});
 	});
 </script>

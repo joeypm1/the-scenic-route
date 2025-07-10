@@ -61,24 +61,14 @@
 				});
 
 				// popup
-				new maplibregl.Popup({ closeButton: false, closeOnClick: true })
+				new maplibregl.Popup({ className: "apple", closeButton: false, closeOnClick: true })
 					.setLngLat(e.lngLat)
-					.setHTML(`
-						<div class="maplibregl-popup-content">
-							<h3>${name}</h3>
-							<p>${desc}</p>
-							<small>Submitted: ${creationDate}</small>
-						</div>
-					`)
+					.setHTML(`<h3>${name}</h3><p>${desc}</p><small>Submitted: ${creationDate}</small>`)
 					.addTo(map);
 			});
 
-			map.on('mouseenter', 'scenic-routes-line', () => {
-				map.getCanvas().style.cursor = 'pointer';
-			});
-			map.on('mouseleave', 'scenic-routes-line', () => {
-				map.getCanvas().style.cursor = '';
-			});
+			map.on('mouseenter', 'scenic-routes-line', () => map.getCanvas().style.cursor = 'pointer');
+			map.on('mouseleave', 'scenic-routes-line', () => map.getCanvas().style.cursor = '');
 		});
 	});
 </script>
@@ -89,7 +79,6 @@
         height: 80vh;
 				margin-top: 5vh;
     }
-
 		.maplibregl-popup-content {
 				font-family: 'Inter', sans-serif;
 				max-width: 300px;
