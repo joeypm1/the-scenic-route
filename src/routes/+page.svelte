@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Slider } from '$lib/components/ui/slider';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import MapLibreGlDirections, { LoadingIndicatorControl, layersFactory } from "@maplibre/maplibre-gl-directions";
@@ -14,22 +15,25 @@
 	let map: maplibregl.Map;
 	let directions: MapLibreGlDirections;
 
-	let start = '';
-	let end = '';
+	let start = $state('');
+	let end = $state('');
 	let startCoord: [number, number];
 	let endCoord: [number, number];
 	let scenicWaypointsAdded = false;
-	let loading = false;
+	let loading = $state(false);
 
-	let startSuggestions: string[] = [];
-	let endSuggestions: string[] = [];
-	let selectedField : 'start' | 'end' | null = null;
+	let startSuggestions: string[] = $state([]);
+	let endSuggestions: string[] = $state([]);
+	let selectedField: 'start' | 'end' | null = $state(null);
+
+	let thresholdMiles = $state(1);
+	let scenicDetours = $state(3);
 
 	function findNearbyScenicSegments(
 		routeLine: GeoJSON.LineString,
 		scenicRoutes: GeoJSON.Feature[]
 	) {
-		const THRESHOLD_MILES = 1;
+		// const THRESHOLD_MILES = 1;
 
 		scenicRoutes.forEach((scenic, index) => {
 			try {
@@ -44,7 +48,7 @@
 				}
 
 				const scenicFeature = turf.feature(scenic.geometry, scenic.properties);
-				const buffered = turf.buffer(scenicFeature, THRESHOLD_MILES, { units: 'miles' });
+				const buffered = turf.buffer(scenicFeature, thresholdMiles, { units: 'miles' });
 				const intersects = buffered && turf.booleanIntersects(routeLine, buffered);
 
 			} catch (err) {
@@ -67,7 +71,7 @@
 				}
 
 				const scenicFeature = turf.feature(scenic.geometry, scenic.properties);
-				const buffered = turf.buffer(scenicFeature, THRESHOLD_MILES, { units: 'miles' });
+				const buffered = turf.buffer(scenicFeature, thresholdMiles, { units: 'miles' });
 				return buffered && turf.booleanIntersects(routeLine, buffered);
 			} catch (e) {
 				console.warn(`Skipping scenic route at index ${index}:`, e);
@@ -91,8 +95,12 @@
 	}
 
 	const debouncedFetch = debounce(fetchSuggestions, 300);
-	$: if (selectedField === 'start' && start.length > 2) debouncedFetch(start, 'start');
-	$: if (selectedField === 'end' && end.length > 2) debouncedFetch(end, 'end');
+	$effect(() => {
+		if (selectedField === 'start' && start.length > 2) debouncedFetch(start, 'start');
+	});
+	$effect(() => {
+		if (selectedField === 'end' && end.length > 2) debouncedFetch(end, 'end');
+	});
 
 	function selectSuggestion(value: string, field: 'start' | 'end') {
 		if (field === 'start') start = value;
@@ -149,7 +157,7 @@
 			// calculate non-scenic directions first
 			[startCoord, endCoord] = await Promise.all([geocode(start), geocode(end)]);
 			scenicWaypointsAdded = false;
-			directions.setWaypoints([startCoord, endCoord]);
+			await directions.setWaypoints([startCoord, endCoord]);
 		} catch (err : any) {
 			alert(err.message);
 		} finally {
@@ -238,11 +246,11 @@
 							return a.score - b.score;
 						});
 
-						const scenicWaypoints: [number, number][] = segmentData.slice(0, 3).flatMap(s => s.points);
+						const scenicWaypoints: [number, number][] = segmentData.slice(0, scenicDetours).flatMap(s => s.points);
 
 						const waypoints: [number, number][] = [
 							startCoord,
-							...scenicWaypoints.slice(0, 6),
+							...scenicWaypoints,
 							endCoord
 						];
 
@@ -326,10 +334,18 @@
 			{/if}
 		</div>
 
-		<button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50" disabled={loading}>
+		<button type="submit" class="bg-blue-500 text-white mb-4 px-4 py-2 rounded disabled:opacity-50" disabled={loading}>
 			{loading ? "Calculating..." : "Get Directions!"}
 		</button>
+
+		<label class="block text-sm font-medium">Amount of scenic detours: {scenicDetours}</label>
+		<Slider type="single" bind:value={scenicDetours} max={10} step={1} class="max-w-xl mx-auto" />
+
+		<label class="block text-sm font-medium">Buffer radius: {thresholdMiles} miles</label>
+		<Slider type="single" bind:value={thresholdMiles} max={10} step={0.5} class="max-w-xl mx-auto" />
+
 	</form>
+
 
 	<div id="map" class="rounded shadow"></div>
 </div>
