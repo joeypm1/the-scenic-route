@@ -19,6 +19,7 @@
 	let start = $state(''), end = $state('');
 	let startLoading = $state(false), endLoading = $state(false);
 	let startCoord: [number, number], endCoord: [number, number];
+	let waypoints: [number, number][];
 	let scenicWaypointsAdded = false;
 	let loading = $state(false);
 
@@ -28,6 +29,9 @@
 
 	let thresholdMiles = $state(1);
 	let scenicDetours = $state(3);
+
+	let nonScenicDistance = $state(0);
+	let totalDistance = $state(0);
 
 	function findNearbyScenicSegments(routeLine: GeoJSON.LineString, scenicRoutes: GeoJSON.Feature[]) {
 		// const THRESHOLD_MILES = 1;
@@ -152,6 +156,22 @@
 		});
 	}
 
+	function openInGoogleMaps(waypoints: [number, number][]) {
+		if (!waypoints?.length) return;
+		const [origin, ...rest] = waypoints;
+		const destination = rest.pop();
+		const stops = rest.map(([lng, lat]) => `${lat},${lng}`).join('|');
+		const originParam = `${origin[1]},${origin[0]}`;
+		const destinationParam = `${destination![1]},${destination![0]}`;
+		const url = new URL('https://www.google.com/maps/dir/');
+		url.searchParams.set('api', '1');
+		url.searchParams.set('origin', originParam);
+		url.searchParams.set('destination', destinationParam);
+		url.searchParams.set('travelmode', 'driving');
+		if (stops) url.searchParams.set('waypoints', stops);
+		window.open(url.toString(), '_blank');
+	}
+
 	async function geocode(location: string): Promise<[number, number]> {
 		const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&viewbox=${getMapBounds()}&countrycodes=us`;//`https://maps.googleapis.com/maps/api/geocode/json?address=${location}`;
 		const res = await fetch(url, {
@@ -190,7 +210,7 @@
 		map.on('load', () => {
 			directions = new MapLibreGlDirections(map, {
 				requestOptions: {
-					alternatives: "true",
+					alternatives: "false",
 				},
 			});
 			directions.interactive = false;
@@ -198,7 +218,12 @@
 			map.addControl(new LoadingIndicatorControl(directions), 'top-right');
 
 			directions.on("fetchroutesend", (event) => {
-				if (scenicWaypointsAdded) return;
+				if (scenicWaypointsAdded) {
+					totalDistance = event.data?.routes[0].distance as number / 1609.344;  // convert to miles
+					return;
+				} else {
+					nonScenicDistance = event.data?.routes[0].distance as number / 1609.344;
+				}
 
 				if (!event.data?.routes?.length) {
 					console.warn("No route returned");
@@ -260,7 +285,7 @@
 
 						const scenicWaypoints: [number, number][] = segmentData.slice(0, scenicDetours).flatMap(s => s.points);
 
-						const waypoints: [number, number][] = [
+						waypoints = [
 							startCoord,
 							...scenicWaypoints,
 							endCoord
@@ -363,6 +388,19 @@
 		<label for="thresholdSlider" class="block text-sm font-medium">Buffer radius: {thresholdMiles} miles</label>
 		<Slider id="thresholdSlider" type="single" bind:value={thresholdMiles} max={10} step={0.5} class="max-w-xl mx-auto" />
 
+		<button type="button" class="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50" onclick={() => openInGoogleMaps(waypoints)} disabled={loading}>
+			Open in Google Maps
+		</button>
+
+		<p>
+			{#if totalDistance}
+				Original Route:
+				{nonScenicDistance.toFixed(1)} miles
+				<br>
+				New (Scenic) Route:
+				<strong>{totalDistance.toFixed(1)} miles</strong>
+			{/if}
+		</p>
 	</form>
 
 
