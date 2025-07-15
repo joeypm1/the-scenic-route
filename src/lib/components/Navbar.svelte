@@ -12,6 +12,7 @@
 
 	<!-- Desktop nav links -->
 	<div class="hidden md:flex gap-6 items-center px-12">
+		<a href="/" class="font-semibold text-green-600 hover:text-blue-600">Get Directions</a>
 		<a href="/explore" class="text-gray-700 hover:text-blue-600">Explore</a>
 		<a href="/submit" class="text-gray-700 hover:text-blue-600">Submit</a>
 		<a href="/about" class="text-gray-700 hover:text-blue-600">About</a>

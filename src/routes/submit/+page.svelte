@@ -25,7 +25,7 @@
 		const m = new maplibregl.Map({
 			container: 'map',
 			style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-			center: [-82.3248, 29.6516], // Gainesville
+			center: [-82.3248, 29.6516],  // gainesville
 			zoom: 13,
 			boxZoom: false,
 			doubleClickZoom: false
@@ -150,72 +150,72 @@
 
 <style>
 		#map {
-				width: 80%;
 				height: 80vh;
-				margin-top: 5vh;
 		}
 </style>
 
-<!-- map -->
-<div class="flex justify-center">
-	<div id="map" class="rounded shadow"></div>
-</div>
+<div class="p-4 grid grid-cols-[minmax(0,300px)_1fr] gap-8">
+	<div id="snap-tool" class="hidden"></div>
 
-<div id="snap-tool" class="hidden"></div>
-
-<!-- toggle drawing button -->
-<h1>Drawing Tools</h1>
-<button
-	class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-	on:click={toggleDrawing}
->
-	{isDrawing ? 'Cancel Drawing' : 'Click to Start Drawing'}
-</button>
-{#if isDrawing}
-	<button
-		class="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-		on:click={finishDrawing}
-	>
-		Finish Route
-	</button>
-{/if}
-
-<!-- confirm form -->
-{#if showConfirm}
-	<div class="mt-4 p-4 bg-white rounded shadow space-y-4">
-		<h2 class="text-lg font-bold">Confirm Scenic Route</h2>
-
-		<label class="block">
-			Name:
-			<input
-				class="w-full mt-1 border border-gray-300 rounded p-2"
-				bind:value={routeName}
-				placeholder="Eg. Tree Tunnel on SW 13th St"
-			/>
-		</label>
-
-		<label class="block">
-			Description (optional):
-			<textarea
-				class="w-full mt-1 border border-gray-300 rounded p-2"
-				bind:value={routeDescription}
-				placeholder="Describe what makes this route scenic..."
-			></textarea>
-		</label>
-
-		<div class="flex gap-4">
+	<div class="flex flex-col gap-4">
+		<!-- toggle/finish drawing buttons -->
+		<h1 class="text-lg font-bold">Drawing Tools</h1>
+		<button
+			class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+			onclick={toggleDrawing}
+		>
+			{isDrawing ? 'Cancel Drawing' : 'Click to Start Drawing'}
+		</button>
+		{#if isDrawing}
 			<button
 				class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-				on:click={submitRoute}
+				onclick={finishDrawing}
 			>
-				Save
+				Finish Route
 			</button>
-			<button
-				class="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
-				on:click={() => { showConfirm = false; routeGeoJson = null; confirmedFeatures?.pop(); updateRoutesLayer() }}
-			>
-				Cancel
-			</button>
-		</div>
+		{/if}
+
+		<!-- confirm form -->
+		{#if showConfirm}
+			<div class="p-4 bg-white rounded shadow space-y-4">
+				<h2 class="text-lg font-bold">Confirm Scenic Route</h2>
+
+				<label class="block">
+					Name:
+					<input
+						class="w-full mt-1 border border-gray-300 rounded p-2"
+						bind:value={routeName}
+						placeholder="e.g. SW Wacahoota Road"
+					/>
+				</label>
+
+				<label class="block">
+					Description (optional):
+					<textarea
+						class="w-full mt-1 border border-gray-300 rounded p-2"
+						bind:value={routeDescription}
+						placeholder="Describe what makes this route scenic..."
+					></textarea>
+				</label>
+
+				<div class="flex gap-2">
+					<button
+						class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+						onclick={submitRoute}
+					>
+						Save
+					</button>
+					<button
+						class="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
+						onclick={() => { showConfirm = false; routeGeoJson = null; confirmedFeatures?.pop(); updateRoutesLayer() }}
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		{/if}
 	</div>
-{/if}
+
+	<!-- map -->
+	<div id="map" class="rounded shadow"></div>
+</div>

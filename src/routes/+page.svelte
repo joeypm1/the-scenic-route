@@ -151,7 +151,8 @@
 		return [parseFloat(data[0].lon), parseFloat(data[0].lat)];
 	}
 
-	async function submitForm() {
+	async function submitForm(event: SubmitEvent) {
+		event.preventDefault();
 		loading = true;
 		try {
 			// calculate non-scenic directions first
@@ -265,27 +266,20 @@
 </script>
 
 <style>
-		#directionsForm {
-				margin-top: 5vh;
-		}
-
     #map {
         height: 80vh;
-        width: 80%;
-				margin-top: 5vh;
-				margin-right: auto;
     }
 </style>
 
-<div class="flex justify-center">
-	<form id="directionsForm" on:submit|preventDefault={submitForm} class="space-y-2 mb-4 px-4 max-w-xl mx-auto">
+<div class="p-4 grid grid-cols-[minmax(0,300px)_1fr] gap-8">
+	<form id="directionsForm" onsubmit={submitForm} class="flex flex-col gap-4">
 		<div class="relative">
 			<label for="start" class="block font-medium">Start Location:</label>
 			<input
 				id="start"
 				type="text"
 				bind:value={start}
-				on:input={() => (selectedField = 'start')}
+				oninput={() => (selectedField = 'start')}
 				placeholder="e.g. 200 E University Ave, Gainesville, FL"
 				class="border rounded px-3 py-2 w-full"
 				autocomplete="off"
@@ -297,7 +291,7 @@
 							<button
 								type="button"
 								class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-								on:click={() => selectSuggestion(suggestion, 'start')}
+								onclick={() => selectSuggestion(suggestion, 'start')}
 							>
 								{suggestion}
 							</button>
@@ -312,7 +306,7 @@
 				id="end"
 				type="text"
 				bind:value={end}
-				on:input={() => (selectedField = 'end')}
+				oninput={() => (selectedField = 'end')}
 				placeholder="e.g. 110 SE Watula Ave, Ocala, FL"
 				class="border rounded px-3 py-2 w-full"
 				autocomplete="off"
@@ -324,7 +318,7 @@
 							<button
 								type="button"
 								class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-								on:click={() => selectSuggestion(suggestion, 'end')}
+								onclick={() => selectSuggestion(suggestion, 'end')}
 							>
 								{suggestion}
 							</button>
@@ -334,15 +328,15 @@
 			{/if}
 		</div>
 
-		<button type="submit" class="bg-blue-500 text-white mb-4 px-4 py-2 rounded disabled:opacity-50" disabled={loading}>
+		<button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50" disabled={loading}>
 			{loading ? "Calculating..." : "Get Directions!"}
 		</button>
 
-		<label class="block text-sm font-medium">Amount of scenic detours: {scenicDetours}</label>
-		<Slider type="single" bind:value={scenicDetours} max={10} step={1} class="max-w-xl mx-auto" />
+		<label for="detourSlider" class="block text-sm font-medium">Amount of scenic detours: {scenicDetours}</label>
+		<Slider id="detourSlider" type="single" bind:value={scenicDetours} max={10} step={1} class="max-w-xl mx-auto" />
 
-		<label class="block text-sm font-medium">Buffer radius: {thresholdMiles} miles</label>
-		<Slider type="single" bind:value={thresholdMiles} max={10} step={0.5} class="max-w-xl mx-auto" />
+		<label for="thresholdSlider" class="block text-sm font-medium">Buffer radius: {thresholdMiles} miles</label>
+		<Slider id="thresholdSlider" type="single" bind:value={thresholdMiles} max={10} step={0.5} class="max-w-xl mx-auto" />
 
 	</form>
 

@@ -119,3 +119,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+.maplibregl-popup-content {
+  font-family: 'Inter', sans-serif;
+  max-width: 300px;
+  padding: 12px;
+  background-color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}

@@ -61,7 +61,7 @@
 				});
 
 				// popup
-				new maplibregl.Popup({ className: "apple", closeButton: false, closeOnClick: true })
+				new maplibregl.Popup({ closeButton: false, closeOnClick: true })
 					.setLngLat(e.lngLat)
 					.setHTML(`<h3>${name}</h3><p>${desc}</p><small>Submitted: ${creationDate}</small>`)
 					.addTo(map);
@@ -77,16 +77,8 @@
     #map {
         width: 80%;
         height: 80vh;
-				margin-top: 5vh;
+				margin-top: 2vh;
     }
-		.maplibregl-popup-content {
-				font-family: 'Inter', sans-serif;
-				max-width: 300px;
-				padding: 12px;
-				background-color: white;
-				box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-				border-radius: 8px;
-		}
 </style>
 
 <div class="flex justify-center">
