@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Slider } from '$lib/components/ui/slider';
+	import { Skeleton } from '$lib/components/ui/skeleton'
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import MapLibreGlDirections, { LoadingIndicatorControl, layersFactory } from "@maplibre/maplibre-gl-directions";
@@ -15,10 +16,9 @@
 	let map: maplibregl.Map;
 	let directions: MapLibreGlDirections;
 
-	let start = $state('');
-	let end = $state('');
-	let startCoord: [number, number];
-	let endCoord: [number, number];
+	let start = $state(''), end = $state('');
+	let startLoading = $state(false), endLoading = $state(false);
+	let startCoord: [number, number], endCoord: [number, number];
 	let scenicWaypointsAdded = false;
 	let loading = $state(false);
 
@@ -29,10 +29,7 @@
 	let thresholdMiles = $state(1);
 	let scenicDetours = $state(3);
 
-	function findNearbyScenicSegments(
-		routeLine: GeoJSON.LineString,
-		scenicRoutes: GeoJSON.Feature[]
-	) {
+	function findNearbyScenicSegments(routeLine: GeoJSON.LineString, scenicRoutes: GeoJSON.Feature[]) {
 		// const THRESHOLD_MILES = 1;
 
 		scenicRoutes.forEach((scenic, index) => {
@@ -87,12 +84,26 @@
 
 	const fetchSuggestions = async (query: string, field: 'start' | 'end') => {
 		if (!query) return;
-		const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${getMapBounds()}&countrycodes=us`);
-		const data = await res.json();
-		const results = data.map((entry: any) => entry.display_name);
-		if (field === 'start') startSuggestions = results;
-		else endSuggestions = results;
-	}
+
+		if (field === 'start') {
+			startSuggestions = [];
+			startLoading = true;
+		} else {
+			endSuggestions = [];
+			endLoading = true;
+		}
+
+		try {
+			const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${getMapBounds()}&countrycodes=us`);
+			const data = await res.json();
+			const results = data.map((entry: any) => entry.display_name);
+			if (field === 'start') startSuggestions = results;
+			else endSuggestions = results;
+		} finally {
+			if (field === 'start') startLoading = false;
+			else endLoading = false;
+		}
+	};
 
 	const debouncedFetch = debounce(fetchSuggestions, 300);
 	$effect(() => {
@@ -284,20 +295,27 @@
 				class="border rounded px-3 py-2 w-full"
 				autocomplete="off"
 			/>
-			{#if selectedField === 'start' && startSuggestions.length > 0}
-				<ul class="absolute bg-white border mt-1 rounded shadow w-full z-10">
-					{#each startSuggestions as suggestion}
-						<li>
-							<button
-								type="button"
-								class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-								onclick={() => selectSuggestion(suggestion, 'start')}
-							>
-								{suggestion}
-							</button>
-						</li>
-					{/each}
-				</ul>
+			{#if selectedField === 'start'}
+				{#if startLoading}
+					<div class="absolute bg-white border mt-1 rounded shadow w-full z-10 p-2 flex flex-col items-center gap-2">
+						<Skeleton class="h-4 w-[250px]" />
+						<Skeleton class="h-4 w-[200px]" />
+					</div>
+				{:else if startSuggestions.length > 0}
+					<ul class="absolute bg-white border mt-1 rounded shadow w-full z-10">
+						{#each startSuggestions as suggestion}
+							<li>
+								<button
+									type="button"
+									class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+									onclick={() => selectSuggestion(suggestion, 'start')}
+								>
+									{suggestion}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			{/if}
 		</div>
 		<div class="relative">
@@ -311,20 +329,27 @@
 				class="border rounded px-3 py-2 w-full"
 				autocomplete="off"
 			/>
-			{#if selectedField === 'end' && endSuggestions.length > 0}
-				<ul class="absolute bg-white border mt-1 rounded shadow w-full z-10">
-					{#each endSuggestions as suggestion}
-						<li>
-							<button
-								type="button"
-								class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-								onclick={() => selectSuggestion(suggestion, 'end')}
-							>
-								{suggestion}
-							</button>
-						</li>
-					{/each}
-				</ul>
+			{#if selectedField === 'end'}
+				{#if endLoading}
+					<div class="absolute bg-white border mt-1 rounded shadow w-full z-10 p-2 flex flex-col items-center gap-2">
+						<Skeleton class="h-4 w-[250px]" />
+						<Skeleton class="h-4 w-[200px]" />
+					</div>
+				{:else if endSuggestions.length > 0}
+					<ul class="absolute bg-white border mt-1 rounded shadow w-full z-10">
+						{#each endSuggestions as suggestion}
+							<li>
+								<button
+									type="button"
+									class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+									onclick={() => selectSuggestion(suggestion, 'end')}
+								>
+									{suggestion}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			{/if}
 		</div>
 
