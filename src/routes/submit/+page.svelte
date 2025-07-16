@@ -10,6 +10,7 @@
 
 	let map: maplibregl.Map;
 	let snapper: RouteSnapper;
+	let loading = true;
 	let isDrawing = false;
 	let confirmedFeatures: (GeoJSON.Feature | null)[] | null = null;
 	let routeGeoJson: GeoJSON.Feature | null = null;
@@ -18,7 +19,7 @@
 	let routeDescription = '';
 
 	onMount(async () => {
-		await init(wasmUrl);
+		await init(wasmUrl);  // init WASM
 
 		const graphBytes = await fetch('/graph/florida_graph.bin').then(r => r.arrayBuffer());
 
@@ -56,12 +57,13 @@
 				}
 			});
 
-
 			snapper = new RouteSnapper(
 				m,
 				new Uint8Array(graphBytes),
 				document.getElementById('snap-tool')!
 			);
+
+			loading = false;
 
 			confirmedFeatures = [];
 
@@ -93,7 +95,7 @@
 
 	function toggleDrawing() {
 		if (isDrawing) {
-			snapper.stop();
+			snapper?.stop();
 			isDrawing = false;
 		} else {
 			snapper.start();
@@ -152,7 +154,23 @@
 		#map {
 				height: 80vh;
 		}
+
+		.loading-overlay {
+				position: fixed;
+				inset: 0;
+				background: rgba(255, 255, 255, 0.95);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				z-index: 9999;
+		}
 </style>
+
+{#if loading}
+	<div class="loading-overlay">
+		<p class="ml-4 text-lg">Loading map data, this may take a few moments...</p>
+	</div>
+{/if}
 
 <div class="p-4 grid grid-cols-[minmax(0,300px)_1fr] gap-8">
 	<div id="snap-tool" class="hidden"></div>
@@ -163,6 +181,7 @@
 		<button
 			class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
 			onclick={toggleDrawing}
+			disabled={loading}
 		>
 			{isDrawing ? 'Cancel Drawing' : 'Click to Start Drawing'}
 		</button>

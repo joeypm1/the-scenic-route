@@ -13,6 +13,10 @@
 
 	pageTitle.set("Get Directions");
 
+	let { data } = $props();
+	let userRoutes = data.userRoutes;
+	let stateRoutes = data.stateRoutes;
+
 	let map: maplibregl.Map;
 	let directions: MapLibreGlDirections;
 
@@ -20,12 +24,14 @@
 	let startLoading = $state(false), endLoading = $state(false);
 	let startCoord: [number, number], endCoord: [number, number];
 	let waypoints: [number, number][];
-	let scenicWaypointsAdded = false;
+	let scenicWaypointsAdded = $state(false);
 	let loading = $state(false);
 
 	let startSuggestions: string[] = $state([]);
 	let endSuggestions: string[] = $state([]);
 	let selectedField: 'start' | 'end' | null = $state(null);
+
+	let includeUsers = $state(true), includeState = $state(false);
 
 	let thresholdMiles = $state(1);
 	let scenicDetours = $state(3);
@@ -242,60 +248,59 @@
 				};
 
 				// fetch scenic routes
-				fetch('/api/routes')
-					.then(res => res.json())
-					.then(data => {
-						const scenicRoutes = data.features;
-						const scenicSegments = findNearbyScenicSegments(routeLine, scenicRoutes);
+				const scenicRoutes = [
+					...(includeUsers ? userRoutes : []),
+					...(includeState ? stateRoutes : [])
+				];
+				const scenicSegments = findNearbyScenicSegments(routeLine, scenicRoutes);
 
-						const segmentData = scenicSegments.map(segment => {
-							const coords = segment.geometry.coordinates;
-							const A: [number, number] = coords[0];
-							const B: [number, number] = coords[coords.length-1];
-							const ptA = turf.point(A);
-							const ptB = turf.point(B);
+				const segmentData = scenicSegments.map(segment => {
+					const coords = segment.geometry.coordinates;
+					const A: [number, number] = coords[0];
+					const B: [number, number] = coords[coords.length-1];
+					const ptA = turf.point(A);
+					const ptB = turf.point(B);
 
-							// snap both ends to route line
-							const nearestA = turf.nearestPointOnLine(routeLine, ptA);
-							const nearestB = turf.nearestPointOnLine(routeLine, ptB);
+					// snap both ends to route line
+					const nearestA = turf.nearestPointOnLine(routeLine, ptA);
+					const nearestB = turf.nearestPointOnLine(routeLine, ptB);
 
-							// how far along the route they lie
-							const offsetA = nearestA.properties!.location as number;
-							const offsetB = nearestB.properties!.location as number;
-							const routeCenter = (offsetA + offsetB) / 2;
+					// how far along the route they lie
+					const offsetA = nearestA.properties!.location as number;
+					const offsetB = nearestB.properties!.location as number;
+					const routeCenter = (offsetA + offsetB) / 2;
 
-							// measure detour in/out distances
-							const inDist = turf.distance(ptA, nearestA, { units: 'miles' });
-							const outDist = turf.distance(ptB, nearestB, { units: 'miles' });
+					// measure detour in/out distances
+					const inDist = turf.distance(ptA, nearestA, { units: 'miles' });
+					const outDist = turf.distance(ptB, nearestB, { units: 'miles' });
 
-							// order entry/exit to always go forward
-							const points: [number, number][] = offsetA < offsetB ? [A, B] : [B, A];
+					// order entry/exit to always go forward
+					const points: [number, number][] = offsetA < offsetB ? [A, B] : [B, A];
 
-							// calculate detour score
-							const score = inDist + outDist * 1.5;
+					// calculate detour score
+					const score = inDist + outDist * 1.5;
 
-							return { points, routeCenter, inDist, outDist, score };
-						});
+					return { points, routeCenter, inDist, outDist, score };
+				});
 
-						// sort by routeCenter (route order), then by score (smallest detour)
-						segmentData.sort((a, b) => {
-							if (a.routeCenter !== b.routeCenter) return a.routeCenter - b.routeCenter;
-							return a.score - b.score;
-						});
+				// sort by routeCenter (route order), then by score (smallest detour)
+				segmentData.sort((a, b) => {
+					if (a.routeCenter !== b.routeCenter) return a.routeCenter - b.routeCenter;
+					return a.score - b.score;
+				});
 
-						const scenicWaypoints: [number, number][] = segmentData.slice(0, scenicDetours).flatMap(s => s.points);
+				const scenicWaypoints: [number, number][] = segmentData.slice(0, scenicDetours).flatMap(s => s.points);
 
-						waypoints = [
-							startCoord,
-							...scenicWaypoints,
-							endCoord
-						];
+				waypoints = [
+					startCoord,
+					...scenicWaypoints,
+					endCoord
+				];
 
-						scenicWaypointsAdded = true;
-						directions.setWaypoints(waypoints);
+				scenicWaypointsAdded = true;
+				directions.setWaypoints(waypoints);
 
-						addLabeledMarkers(waypoints);
-					});
+				addLabeledMarkers(waypoints);
 			});
 		});
 	});
@@ -382,13 +387,21 @@
 			{loading ? "Calculating..." : "Get Directions!"}
 		</button>
 
+		<label><input type="checkbox" bind:checked={includeUsers} />
+			Use user-submitted routes
+		</label>
+
+		<label><input type="checkbox" bind:checked={includeState} />
+			Use FDOT scenic highways
+		</label>
+
 		<label for="detourSlider" class="block text-sm font-medium">Amount of scenic detours: {scenicDetours}</label>
 		<Slider id="detourSlider" type="single" bind:value={scenicDetours} max={10} step={1} class="max-w-xl mx-auto" />
 
 		<label for="thresholdSlider" class="block text-sm font-medium">Buffer radius: {thresholdMiles} miles</label>
 		<Slider id="thresholdSlider" type="single" bind:value={thresholdMiles} max={10} step={0.5} class="max-w-xl mx-auto" />
 
-		<button type="button" class="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50" onclick={() => openInGoogleMaps(waypoints)} disabled={loading}>
+		<button type="button" class="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50" onclick={() => openInGoogleMaps(waypoints)} disabled={loading || !scenicWaypointsAdded}>
 			Open in Google Maps
 		</button>
 
