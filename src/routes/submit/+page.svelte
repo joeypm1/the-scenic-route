@@ -20,7 +20,7 @@
 	onMount(async () => {
 		await init(wasmUrl);
 
-		const graphBytes = await fetch('/graph/streets_only_graph_gnv.bin').then(r => r.arrayBuffer());
+		const graphBytes = await fetch('/graph/florida_graph.bin').then(r => r.arrayBuffer());
 
 		const m = new maplibregl.Map({
 			container: 'map',

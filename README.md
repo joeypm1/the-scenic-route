@@ -8,11 +8,13 @@ State-designated Scenic Highways are used as well.
 ## Building a graph file
 
 A graph file (.bin) must be used for route snapping functionality. Here is one way to do this:
-1. Get a Protocolbuffer (.osm.pbf) file from [BBBike](https://extract.bbbike.org/). 
+1. Get a Protocolbuffer (.osm.pbf) file.
+   1. For full functionality, download florida-latest.osm.pbf from [Geofabrik](https://download.geofabrik.de/north-america/us/florida.html).
+   2. For testing smaller areas, use [BBBike](https://extract.bbbike.org/).
 2. You'll need to [install Osmium Tool](https://osmcode.org/osmium-tool/) to run this:
 ```bash
 osmium tags-filter \                                                                                  
-  path/to/extracted.osm.pbf \
+  path/to/florida-latest.osm.pbf \
   w/highway=motorway \
   w/highway=trunk \
   w/highway=primary \
@@ -30,6 +32,6 @@ osmium tags-filter \
 cd osm-to-route-snapper
 cargo run --release -- \
   --input path/to/filtered.osm.pbf \
-  --output graph.bin
+  --output florida_graph.bin
 ```
-5. Place graph.bin inside the static/graph directory.
+5. Place florida_graph.bin inside the static/graph directory.
