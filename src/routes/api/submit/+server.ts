@@ -4,7 +4,8 @@ import { json } from '@sveltejs/kit';
 
 export async function POST({ request }) {
 	const body = await request.json();
-	console.log('Received body:', body);
+	// console.log('Received body:', body);
+	const routeGeo = JSON.parse(body.route_json) as GeoJSON.Feature;
 
 	if (
 		!body.name || typeof body.name !== 'string' ||
@@ -16,8 +17,7 @@ export async function POST({ request }) {
 	await db.insert(scenicSegments).values({
 		name: body.name,
 		description: body.description ?? null,
-		route_json: body.route_json,
-		createdAt: new Date().toISOString()
+		route_json: routeGeo,
 	});
 
 	return json({ success: true });

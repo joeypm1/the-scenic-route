@@ -1,26 +1,26 @@
-import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, serial, integer, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
 
-export const user = sqliteTable('user', {
-	id: text('id').primaryKey(),
+export const user = pgTable('user', {
+	id: serial('id').primaryKey(),
 	age: integer('age'),
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull()
 });
 
-export const session = sqliteTable('session', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
+export const session = pgTable('session', {
+	id: serial('id').primaryKey(),
+	userId: integer('user_id')
 		.notNull()
 		.references(() => user.id),
-	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull()
+	expiresAt: timestamp('expires_at', { mode: 'string' }).notNull()
 });
 
-export const scenicSegments = sqliteTable('scenic_segments', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
+export const scenicSegments = pgTable('scenic_segments', {
+	id: serial('id').primaryKey(),
 	name: text('name').notNull(),
 	description: text('description'),
-	route_json: text('route_json').notNull(),
-	createdAt: text('createdAt').default(new Date().toISOString())
+	route_json: jsonb('route_json').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
 export type Session = typeof session.$inferSelect;
