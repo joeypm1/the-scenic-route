@@ -4,11 +4,10 @@
 	import { Skeleton } from '$lib/components/ui/skeleton'
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import MapLibreGlDirections, { LoadingIndicatorControl, layersFactory } from "@maplibre/maplibre-gl-directions";
+	import MapLibreGlDirections, { LoadingIndicatorControl } from "@maplibre/maplibre-gl-directions";
 	import { pageTitle } from '$lib/stores/titleStore';
 	import { debounce } from '$lib/utils/debounce';
 	import * as turf from '@turf/turf';
-	import distance from '@turf/distance';
 	import polyline from '@mapbox/polyline';
 
 	pageTitle.set("Get Directions");
@@ -40,7 +39,6 @@
 	let totalDistance = $state(0);
 
 	function findNearbyScenicSegments(routeLine: GeoJSON.LineString, scenicRoutes: GeoJSON.Feature[]) {
-		// const THRESHOLD_MILES = 1;
 
 		scenicRoutes.forEach((scenic, index) => {
 			try {

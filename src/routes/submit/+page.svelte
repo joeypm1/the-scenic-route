@@ -21,7 +21,7 @@
 	onMount(async () => {
 		await init(wasmUrl);  // init WASM
 
-		const graphBytes = await fetch('/graph/florida_graph.bin').then(r => r.arrayBuffer());
+		const graphBytes = await fetch('/api/graph').then(r => r.arrayBuffer());
 
 		const m = new maplibregl.Map({
 			container: 'map',
