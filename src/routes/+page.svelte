@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Slider } from '$lib/components/ui/slider';
-	import { Skeleton } from '$lib/components/ui/skeleton'
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import MapLibreGlDirections, { LoadingIndicatorControl } from "@maplibre/maplibre-gl-directions";

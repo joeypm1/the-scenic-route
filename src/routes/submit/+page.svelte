@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Progress } from '$lib/components/ui/progress';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import wasmUrl from 'route-snapper/route_snapper_bg.wasm?url';
@@ -11,6 +12,7 @@
 	let map: maplibregl.Map;
 	let snapper: RouteSnapper;
 	let loading = true;
+	let progress = 0;
 	let isDrawing = false;
 	let confirmedFeatures: (GeoJSON.Feature | null)[] | null = null;
 	let routeGeoJson: GeoJSON.Feature | null = null;
@@ -21,7 +23,28 @@
 	onMount(async () => {
 		await init(wasmUrl);  // init WASM
 
-		const graphBytes = await fetch('/api/graph').then(r => r.arrayBuffer());
+		// start, read, and count bytes of request
+		const res = await fetch('/api/graph');
+		const contentLength = Number(res.headers.get('Content-Length') || 0);
+		const reader = res.body!.getReader();
+		let received = 0;
+		const chunks: Uint8Array[] = [];
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			chunks.push(value);
+			received += value.byteLength;
+			progress = 0.5 * (received / contentLength / 2.7);
+		}
+		// concatenation
+		const graphBytes = new Uint8Array(received);
+		let offset = 0;
+		for (let i = 0; i < chunks.length; i++) {
+			const c = chunks[i];
+			graphBytes.set(c, offset);
+			offset += c.byteLength;
+			progress = 0.5 + 0.3 * ((i) / chunks.length);
+		}
 
 		const m = new maplibregl.Map({
 			container: 'map',
@@ -63,8 +86,6 @@
 				document.getElementById('snap-tool')!
 			);
 
-			loading = false;
-
 			confirmedFeatures = [];
 
 			document.getElementById('snap-tool')!.addEventListener('new-route', (e) => {
@@ -83,6 +104,12 @@
 			document.getElementById('snap-tool')!.addEventListener('no-new-route', () => {
 				console.log('No valid route created');
 			});
+
+
+			progress = 1;
+			setTimeout(() => {
+				loading = false;
+			}, 200);
 		});
 	});
 
@@ -167,8 +194,9 @@
 </style>
 
 {#if loading}
-	<div class="loading-overlay">
+	<div class="loading-overlay flex flex-col gap-4">
 		<p class="ml-4 text-lg">Loading map data, this may take a few moments...</p>
+		<Progress value={progress} max={1} class="w-[40%]" />
 	</div>
 {/if}
 
@@ -178,13 +206,15 @@
 	<div class="flex flex-col gap-4">
 		<!-- toggle/finish drawing buttons -->
 		<h1 class="text-lg font-bold">Drawing Tools</h1>
-		<button
-			class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-			onclick={toggleDrawing}
-			disabled={loading}
-		>
-			{isDrawing ? 'Cancel Drawing' : 'Click to Start Drawing'}
-		</button>
+		{#if !showConfirm}
+			<button
+				class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+				onclick={toggleDrawing}
+				disabled={loading}
+			>
+				{isDrawing ? 'Cancel Drawing' : 'Click to Start Drawing'}
+			</button>
+		{/if}
 		{#if isDrawing}
 			<button
 				class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
