@@ -34,7 +34,7 @@
 			if (done) break;
 			chunks.push(value);
 			received += value.byteLength;
-			progress = 0.5 * (received / contentLength / 2.7);
+			progress = (progress < 0.2) ? 0.2 * (received / contentLength / 5) : 0.2;
 		}
 		// concatenation
 		const graphBytes = new Uint8Array(received);
@@ -43,7 +43,7 @@
 			const c = chunks[i];
 			graphBytes.set(c, offset);
 			offset += c.byteLength;
-			progress = 0.5 + 0.3 * ((i) / chunks.length);
+			progress = 0.2 + 0.3 * ((i) / chunks.length);
 		}
 
 		const m = new maplibregl.Map({
