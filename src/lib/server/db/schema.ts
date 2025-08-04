@@ -23,6 +23,14 @@ export const scenicSegments = pgTable('scenic_segments', {
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
+export const scenicSegmentRatings = pgTable('scenic_segment_ratings', {
+	id: serial('id').primaryKey(),
+	segmentId: integer('segment_id').notNull().references(() => scenicSegments.id),
+	userId: integer('user_id').notNull().references(() => user.id),
+	rating: integer('rating').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export type Session = typeof session.$inferSelect;
 
 export type User = typeof user.$inferSelect;

@@ -1,35 +1,37 @@
 import { db } from '$lib/server/db';
-import { scenicSegments } from '$lib/server/db/schema';
+import { scenicSegments, scenicSegmentRatings } from '$lib/server/db/schema';
 import { json } from '@sveltejs/kit';
+import { eq, avg, count } from 'drizzle-orm';
 
 export async function GET() {
-	const rows = await db.select().from(scenicSegments);
+	const rows = await db
+		.select({
+			id: scenicSegments.id,
+			routeJson: scenicSegments.route_json,
+			name: scenicSegments.name,
+			description: scenicSegments.description,
+			createdAt: scenicSegments.createdAt,
+			avgRating: avg(scenicSegmentRatings.rating).as('avgRating'),
+			ratingCount: count(scenicSegmentRatings.rating).as('count')
+		})
+		.from(scenicSegments)
+		.leftJoin(
+			scenicSegmentRatings,
+			eq(scenicSegmentRatings.segmentId, scenicSegments.id)
+		)
+		.groupBy(scenicSegments.id);
 
-	const features = rows.map((row) => {
-		try {
-			const geo = row.route_json as GeoJSON.Feature;
-			return {
-				type: 'Feature',
-				geometry: geo.geometry,
-				properties: {
-					...(geo.properties ?? {}),
-					name: row.name,
-					description: row.description ?? '',
-					createdAt: row.createdAt,
-				}
-				// ...geo,
-				// properties: {
-				// 	...(geo.properties ?? {}),
-				// 	name: row.name,
-				// 	description: row.description ?? '',
-				// 	createdAt: row.createdAt
-				// }
-			};
-		} catch (e) {
-			console.warn('Failed to parse route_json:', e);
-			return null;
+	const features = rows.map((row) => ({
+		type: 'Feature' as const,
+		geometry: (row.routeJson as GeoJSON.Feature).geometry,
+		properties: {
+			name: row.name,
+			description: row.description ?? '',
+			createdAt: row.createdAt,
+			avgRating: row.avgRating ?? 0,
+			ratingCount: row.ratingCount ?? 0,
 		}
-	}).filter(Boolean);
+	}));
 
 	return json({ features });
 }

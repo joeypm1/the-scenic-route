@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, mount } from 'svelte';
+	import RatingDisplay from '$lib/components/RatingDisplay.svelte';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { pageTitle } from '$lib/stores/titleStore';
@@ -79,10 +80,11 @@
 
 			// popups
 			map.on('click', 'user-routes-line', (e) => {
-				const props = e.features?.[0]?.properties;
+				const props = e.features![0].properties!;
 				const name = props?.name ?? 'Unnamed';
 				const desc = props?.description ?? 'No description';
 				const creationDate = props?.createdAt ? new Date(props.createdAt).toLocaleDateString() : 'Unknown date';
+				const rating = Number(props.avgRating) || 0;
 
 				// zoom to LineString
 				const coordinates = e.features?.[0]?.geometry.coordinates;
@@ -95,9 +97,30 @@
 				});
 
 				// popup
+				const container = document.createElement('div');
+				container.classList.add('popup-content');
+				const h3 = document.createElement('h3');
+				h3.textContent = name;
+				container.appendChild(h3);
+				const p = document.createElement('p');
+				p.textContent = desc;
+				container.appendChild(p);
+				const s = document.createElement('small');
+				s.textContent = `Submitted: ${creationDate}`;
+				container.appendChild(s);
+
+				const starsHolder = document.createElement('div');
+				container.appendChild(starsHolder);
+
+				mount(RatingDisplay, {
+					target: starsHolder,
+					props: { value: rating }
+				});
+
 				new maplibregl.Popup({ closeButton: false, closeOnClick: true })
 					.setLngLat(e.lngLat)
-					.setHTML(`<h3>${name}</h3><p>${desc}</p><small>Submitted: ${creationDate}</small>`)
+					// .setHTML(`<h3>${name}</h3><p>${desc}</p><small>Submitted: ${creationDate}</small>`)
+					.setDOMContent(container)
 					.addTo(map);
 			});
 
