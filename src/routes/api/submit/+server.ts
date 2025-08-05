@@ -2,9 +2,11 @@ import { db } from '$lib/server/db';
 import { scenicSegments } from '$lib/server/db/schema';
 import { json } from '@sveltejs/kit';
 
-export async function POST({ request }) {
+export async function POST({ request, locals }) {
 	const body = await request.json();
-	// console.log('Received body:', body);
+	const user = locals.user;
+	if (!user) return json({ error: 'Not logged in' }, { status: 401 });
+
 	const routeGeo = JSON.parse(body.route_json) as GeoJSON.Feature;
 
 	if (
@@ -18,6 +20,7 @@ export async function POST({ request }) {
 		name: body.name,
 		description: body.description ?? null,
 		route_json: routeGeo,
+		user_id: user.id
 	});
 
 	return json({ success: true });

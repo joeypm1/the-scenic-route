@@ -39,7 +39,6 @@
 	let totalDistance = $state(0);
 
 	function findNearbyScenicSegments(routeLine: GeoJSON.LineString, scenicRoutes: GeoJSON.Feature[]) {
-
 		scenicRoutes.forEach((scenic, index) => {
 			try {
 				if (

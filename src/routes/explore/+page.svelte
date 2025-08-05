@@ -81,9 +81,10 @@
 			// popups
 			map.on('click', 'user-routes-line', (e) => {
 				const props = e.features![0].properties!;
-				const name = props?.name ?? 'Unnamed';
-				const desc = props?.description ?? 'No description';
-				const creationDate = props?.createdAt ? new Date(props.createdAt).toLocaleDateString() : 'Unknown date';
+				const name = props.name ?? 'Unnamed';
+				const desc = props.description ?? 'No description';
+				const username = props.submittedBy ?? 'unknown';
+				const creationDate = props.createdAt ? new Date(props.createdAt).toLocaleDateString() : 'Unknown date';
 				const rating = Number(props.avgRating) || 0;
 
 				// zoom to LineString
@@ -106,7 +107,7 @@
 				p.textContent = desc;
 				container.appendChild(p);
 				const s = document.createElement('small');
-				s.textContent = `Submitted: ${creationDate}`;
+				s.textContent = `Submitted by ${username} on ${creationDate}`;
 				container.appendChild(s);
 
 				const starsHolder = document.createElement('div');
