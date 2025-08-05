@@ -24,6 +24,7 @@ export async function GET() {
 		type: 'Feature' as const,
 		geometry: (row.routeJson as GeoJSON.Feature).geometry,
 		properties: {
+			id: row.id,
 			name: row.name,
 			description: row.description ?? '',
 			createdAt: row.createdAt,

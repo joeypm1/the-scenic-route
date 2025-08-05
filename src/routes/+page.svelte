@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Slider } from '$lib/components/ui/slider';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import MapLibreGlDirections, { LoadingIndicatorControl } from "@maplibre/maplibre-gl-directions";
 	import { pageTitle } from '$lib/stores/titleStore';
+	import { suggestedRoutes } from '$lib/stores/suggestedRoutes';
 	import { debounce } from '$lib/utils/debounce';
 	import * as turf from '@turf/turf';
 	import polyline from '@mapbox/polyline';
@@ -294,6 +296,8 @@
 					endCoord
 				];
 
+				suggestedRoutes.set(scenicSegments);
+
 				scenicWaypointsAdded = true;
 				directions.setWaypoints(waypoints);
 
@@ -402,6 +406,10 @@
 			Open in Google Maps
 		</button>
 
+		<button type="button" class="mt-2 bg-yellow-500 text-white px-4 py-2 rounded disabled:opacity-50" onclick={() => goto('/rate')} disabled={!scenicWaypointsAdded}>
+			Rate these suggestions
+		</button>
+
 		<p>
 			{#if totalDistance}
 				Original Route:
@@ -412,7 +420,6 @@
 			{/if}
 		</p>
 	</form>
-
 
 	<div id="map" class="rounded shadow"></div>
 </div>
