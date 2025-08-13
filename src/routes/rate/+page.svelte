@@ -22,8 +22,9 @@
 
 	let map: maplibregl.Map;
 	let inited = false;
-
 	let selectedId: number | null = null;
+
+	let mustLogin = false;
 
 	async function initMap() {
 		await tick();
@@ -64,7 +65,7 @@
 		});
 	}
 
-	$: if (routes.length && !inited) {
+	$: if (routes.length && !inited && !mustLogin) {
 		inited = true;
 		initMap();
 	}
@@ -77,6 +78,11 @@
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({ ids })
 		});
+
+		if (res.status === 401) {
+			mustLogin = true;
+			return;
+		}
 		if (!res.ok) {
 			console.error('failed to load my ratings');
 			return;
@@ -116,6 +122,10 @@
 	}
 
 	async function submitRatings() {
+		if (mustLogin) {
+			goto('/login?redirect=/rate');
+			return;
+		}
 		const payload = routes.map(r => ({
 			segmentId: r.properties!.id,
 			rating: r.properties.myRating
@@ -140,7 +150,18 @@
 		}
 </style>
 
-{#if routes.length === 0}
+{#if mustLogin}
+	<div class="p-6 max-w-xl mx-auto text-center space-y-4">
+		<h1 class="text-2xl font-bold">Log in to rate routes</h1>
+		<p>You must be logged in to rate scenic routes.</p>
+		<button
+			class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+			onclick={() => goto('/login?redirect=/rate')}
+		>
+			Go to Login
+		</button>
+	</div>
+{:else if routes.length === 0}
 	<p class="p-4">No suggestions to rate. Please go back and generate some routes first.</p>
 {:else}
 	<div class="p-4 grid grid-cols-[minmax(0,300px)_1fr] gap-8">

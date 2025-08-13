@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { pageTitle } from '$lib/stores/titleStore';
 	let isOpen = false;
+
+	const user = $derived(page.data.user ?? null);
 </script>
 
 <nav class="bg-white border-b border-gray-200 shadow-md px-4 py-3 flex justify-between items-center">
@@ -16,6 +19,11 @@
 		<a href="/explore" class="text-gray-700 hover:text-blue-600">Explore</a>
 		<a href="/submit" class="text-gray-700 hover:text-blue-600">Submit</a>
 		<a href="/about" class="text-gray-700 hover:text-blue-600">About</a>
+		{#if user}
+			<a href="/profile" class="text-gray-700 hover:text-blue-600">View profile</a>
+		{:else}
+			<a href="/login" class="text-gray-700 hover:text-blue-600">Log in or sign up</a>
+		{/if}
 	</div>
 
 	<!-- Mobile Hamburger -->
@@ -36,5 +44,10 @@
 		<a href="/explore" class="block text-gray-700 hover:text-blue-600">Explore</a>
 		<a href="/submit" class="block text-gray-700 hover:text-blue-600">Submit</a>
 		<a href="/about" class="block text-gray-700 hover:text-blue-600">About</a>
+		{#if user}
+			<a href="/profile" class="block text-gray-700 hover:text-blue-600">View profile</a>
+		{:else}
+			<a href="/login" class="block text-gray-700 hover:text-blue-600">Log in or sign up</a>
+		{/if}
 	</div>
 {/if}
