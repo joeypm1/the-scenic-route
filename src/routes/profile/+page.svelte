@@ -21,6 +21,10 @@
 		}
 	}
 
+	function fmt(n: number | null | undefined, digits = 1) {
+		return n == null ? '-' : n.toFixed(digits);
+	}
+
 	const enhanceSubmit: SubmitFunction = () => {
 		return async ({ result, update }) => {
 			await update();
@@ -45,9 +49,10 @@
 
 			<!-- User ID row -->
 			<div class="mt-6">
-				<label class="block text-sm font-medium text-gray-600 mb-1">User ID</label>
+				<label for="user-id" class="block text-sm font-medium text-gray-600 mb-1">User ID</label>
 				<div class="flex items-stretch gap-2">
 					<input
+						id="user-id"
 						class="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 truncate"
 						value={String(data.user.id)}
 						readonly
@@ -63,25 +68,26 @@
 				</div>
 			</div>
 
+			<!-- Stats -->
 			<div class="mt-6 grid grid-cols-3 gap-3 text-center">
 				<div class="rounded-lg border p-3">
-					<div class="text-xl font-bold">12</div>
+					<div class="text-xl font-bold">{data.stats.routesSubmitted}</div>
 					<div class="text-xs text-gray-500">Routes</div>
 				</div>
 				<div class="rounded-lg border p-3">
-					<div class="text-xl font-bold">34</div>
-					<div class="text-xs text-gray-500">Ratings</div>
+					<div class="text-xl font-bold">{data.stats.ratingsGiven}</div>
+					<div class="text-xs text-gray-500">Ratings given</div>
 				</div>
 				<div class="rounded-lg border p-3">
-					<div class="text-xl font-bold">4.7</div>
-					<div class="text-xs text-gray-500">Avg Rating</div>
+					<div class="text-xl font-bold">{fmt(data.stats.avgRating)}</div>
+					<div class="text-xs text-gray-500">Average Rating</div>
 				</div>
 			</div>
 
 			<!-- Quick actions -->
 			<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<a
-					href="/explore"
+					href={`/explore?by=${encodeURIComponent(data.user.id)}`}
 					class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 font-medium text-gray-800 hover:bg-gray-50 transition"
 				>
 					Your routes
